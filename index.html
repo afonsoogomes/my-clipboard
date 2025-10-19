@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Clipboard Dinâmico</title>
+  <style>
+    body {
+      font-family: system-ui, sans-serif;
+      background: #f5f6fa;
+      margin: 0;
+      padding: 20px;
+      max-width: 700px;
+      margin-inline: auto;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    form {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+      background: white;
+      padding: 15px;
+      border-radius: 10px;
+      box-shadow: 0 2px 6px rgba(0,0,0,.1);
+      align-items: center;
+    }
+    input {
+      flex: 1;
+      padding: 10px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+    }
+    button {
+      padding: 10px 14px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      font-weight: 500;
+      color: white;
+      transition: background 0.2s;
+    }
+    button svg {
+      width: 18px;
+      height: 18px;
+      fill: white;
+      pointer-events: none;
+    }
+    .add-btn {
+      background: #007bff;
+    }
+    .add-btn:hover {
+      background: #0069d9;
+    }
+    .cards {
+      display: grid;
+      gap: 12px;
+    }
+    .card {
+      background: white;
+      padding: 15px;
+      border-radius: 10px;
+      box-shadow: 0 2px 6px rgba(0,0,0,.08);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .info {
+      flex: 1;
+      min-width: 200px;
+    }
+    .name {
+      font-weight: 600;
+      font-size: 1.1em;
+    }
+    .value {
+      font-family: monospace;
+      margin-top: 4px;
+      color: #333;
+      word-break: break-all;
+    }
+    .actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .copy-btn {
+      background: #28a745;
+    }
+    .copy-btn:hover {
+      background: #218838;
+    }
+    .delete-btn {
+      background: #dc3545;
+    }
+    .delete-btn:hover {
+      background: #c82333;
+    }
+    .copied {
+      background: #17a2b8 !important;
+    }
+  </style>
+</head>
+<body>
+  <h1>📋 Clipboard Dinâmico</h1>
+
+  <form id="addForm">
+    <input type="text" id="name" placeholder="Nome" required>
+    <input type="text" id="value" placeholder="Valor" required>
+    <button type="submit" class="add-btn" title="Adicionar item">
+      <svg viewBox="0 0 24 24"><path d="M19 13H13V19H11V13H5V11H11V5H13V11H19V13Z"/></svg>
+      Adicionar
+    </button>
+  </form>
+
+  <div class="cards" id="cards"></div>
+
+  <script>
+    const STORAGE_KEY = 'clipboard_items_v1';
+    const form = document.getElementById('addForm');
+    const cardsContainer = document.getElementById('cards');
+
+    function loadItems() {
+      const data = localStorage.getItem(STORAGE_KEY);
+      return data ? JSON.parse(data) : [];
+    }
+
+    function saveItems(items) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+    }
+
+    function renderItems() {
+      const items = loadItems();
+      cardsContainer.innerHTML = '';
+
+      for (const item of items) {
+        const card = document.createElement('div');
+        card.className = 'card';
+
+        const info = document.createElement('div');
+        info.className = 'info';
+        info.innerHTML = `
+          <div class="name">${item.name}</div>
+          <div class="value">${item.value}</div>
+        `;
+
+        const actions = document.createElement('div');
+        actions.className = 'actions';
+
+        // Botão copiar
+        const copyBtn = document.createElement('button');
+        copyBtn.className = 'copy-btn';
+        copyBtn.title = 'Copiar valor';
+        copyBtn.innerHTML = `
+          <svg viewBox="0 0 24 24"><path d="M19,21H8V7H19M19,5H8A2,2 0 0,0 6,7V21A2,2 0 0,0 8,23H19A2,2 0 0,0 21,21V7A2,2 0 0,0 19,5M16,1H4A2,2 0 0,0 2,3V17H4V3H16V1Z"/></svg>
+          Copiar
+        `;
+        copyBtn.addEventListener('click', () => {
+          const tempInput = document.createElement('textarea');
+          tempInput.value = item.value;
+          document.body.appendChild(tempInput);
+          tempInput.select();
+          document.execCommand('copy');
+          document.body.removeChild(tempInput);
+
+          const originalHTML = copyBtn.innerHTML;
+          copyBtn.classList.add('copied');
+          copyBtn.innerHTML = `
+            <svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+            Copiado!
+          `;
+          copyBtn.disabled = true;
+
+          setTimeout(() => {
+            copyBtn.innerHTML = originalHTML;
+            copyBtn.disabled = false;
+            copyBtn.classList.remove('copied');
+          }, 1500);
+        });
+
+        // Botão excluir
+        const deleteBtn = document.createElement('button');
+        deleteBtn.className = 'delete-btn';
+        deleteBtn.title = 'Excluir item';
+        deleteBtn.innerHTML = `
+          <svg viewBox="0 0 24 24">
+            <path d="M9 3V4H4V6H5V19C5 20.1 5.9 21 7 21H17C18.1 21 19 20.1 19 19V6H20V4H15V3H9ZM7 6H17V19H7V6ZM9 8V17H11V8H9ZM13 8V17H15V8H13Z"/>
+          </svg>
+          Excluir
+        `;
+        deleteBtn.addEventListener('click', () => {
+          const updated = loadItems().filter(i => i.id !== item.id);
+          saveItems(updated);
+          renderItems();
+        });
+
+        actions.append(copyBtn, deleteBtn);
+        card.append(info, actions);
+        cardsContainer.appendChild(card);
+      }
+    }
+
+    form.addEventListener('submit', e => {
+      e.preventDefault();
+      const name = document.getElementById('name').value.trim();
+      const value = document.getElementById('value').value.trim();
+      if (!name || !value) return;
+
+      const items = loadItems();
+      items.push({ id: Date.now(), name, value });
+      saveItems(items);
+      form.reset();
+      renderItems();
+    });
+
+    renderItems();
+  </script>
+</body>
+</html>
